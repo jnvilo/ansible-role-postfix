@@ -1,0 +1,58 @@
+# print Using postfix role
+
+# print the vaule of ansible_hostname
+- debug:
+    msg: "ansible_hostname is {{ansible_hostname}}"
+
+# make sure apt-utils is installed
+- name: Install apt-utils
+  package:
+    name: apt-utils
+    state: present
+
+
+# check if postfix is installed
+- name: Check if postfix is installed
+  stat:
+    path: /usr/sbin/postfix
+  register: postfix_installed
+
+
+- name: Set Postfix option hostname
+  debconf: 
+    name=postifx 
+    question="postfix/mailname" 
+    value="{{server_hostname}}" 
+    vtype="string"
+  when: postfix_installed.stat.exists == false
+
+- name: Set Postfix option type as internet site
+  debconf: 
+    name=postfix 
+    question="postfix/main_mailer_type" 
+    value="'Internet Site'" 
+    vtype="string"
+  when: postfix_installed.stat.exists == false
+
+- name: Configure mynetworks
+  debconf: 
+    name=postfix 
+    question="postfix/mynetworks" 
+    value="{{mynetworks}}" 
+    vtype="string"
+  when: postfix_installed.stat.exists == false
+
+
+- name: install postfix
+  apt: name=postfix state=present
+  when: postfix_installed.stat.exists == false
+  notify: restart postfix
+
+
+# The main.cf.j2 will only be deployed if postfix is already installed
+- name: deploy the template file main.cf
+  template:
+    src: main.cf.j2
+    dest: /etc/postfix/main.cf
+  when: postfix_installed.stat.exists == true
+  notify: restart postfix

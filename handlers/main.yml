@@ -1,0 +1,6 @@
+# handle restart postfix
+- name: restart postfix
+  service:
+    name: postfix
+    state: restarted
+  #notify: reload firewalld
